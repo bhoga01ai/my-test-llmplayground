@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>my-test-llmplayground</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Unified Title Section -->
+        <div class="unified-title-section">
+            <div class="title-content">
+                <div class="title-logo">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="title-main">
+                    <h1>LLM Playground</h1>
+                    <span class="title-subtitle">AI Model Explorer</span>
+                </div>
+                <div class="title-features">
+                    <span class="feature-badge">OpenAI</span>
+                    <span class="feature-badge">Google</span>
+                    <span class="feature-badge">Anthropic</span>
+                    <span class="feature-badge">Groq</span>
+                </div>
+                <div class="title-status">
+                    <span class="status-indicator"></span>
+                    <span class="status-text">Ready</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Layout -->
+        <div class="main-layout">
+            <!-- Sidebar -->
+            <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-code"></i>
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <span>my-test-llmplayground</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <button class="new-chat-btn">
+                    <i class="fas fa-plus"></i>
+                    New chat
+                </button>
+                
+
+            </div>
+        </div>
+        
+            <!-- Main Content -->
+            <div class="main-content">
+                
+                <!-- Center Panel - Chat Interface -->
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Messages will be dynamically added here -->
+                    </div>
+                    
+                    <!-- Centered Chat Interface -->
+                    <div class="chat-center-section">
+                        <div class="chat-welcome">
+                            <h2 class="prompt-header">What would you like to explore today?</h2>
+                            <p class="prompt-subtitle">Choose a prompt below or ask your own question</p>
+                        </div>
+                        
+                        <!-- Input Container -->
+                         <div class="input-container">
+                             <div class="input-wrapper">
+                                 <button class="attach-btn">
+                                     <i class="fas fa-paperclip"></i>
+                                 </button>
+                                 <input type="text" id="messageInput" placeholder="Ask anything" class="message-input">
+                                 <button class="send-btn" id="sendBtn">
+                                     <i class="fas fa-arrow-up"></i>
+                                 </button>
+                             </div>
+                         </div>
+                         
+                         <!-- Default Prompts Section (2 rows x 4 columns) -->
+                         <div class="default-prompts">
+                             <div class="prompt-card" data-prompt="Explain quantum computing in simple terms">
+                                 <i class="fas fa-atom"></i>
+                                 <span>Explain quantum computing</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Write a creative story about AI and humans">
+                                 <i class="fas fa-pen-fancy"></i>
+                                 <span>Write a creative story</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Help me debug this Python code">
+                                 <i class="fas fa-bug"></i>
+                                 <span>Debug Python code</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Summarize the latest trends in machine learning">
+                                 <i class="fas fa-chart-line"></i>
+                                 <span>ML trends summary</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Create a business plan for a tech startup">
+                                 <i class="fas fa-lightbulb"></i>
+                                 <span>Tech startup plan</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Explain the difference between React and Vue.js">
+                                 <i class="fas fa-code"></i>
+                                 <span>React vs Vue.js</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Generate a SQL query for data analysis">
+                                 <i class="fas fa-database"></i>
+                                 <span>SQL query help</span>
+                             </div>
+                             <div class="prompt-card" data-prompt="Design a REST API architecture">
+                                 <i class="fas fa-network-wired"></i>
+                                 <span>REST API design</span>
+                             </div>
+                         </div>
+                    </div>
+                
+                <!-- Fixed Input Container (shown when chat has messages) -->
+                <div class="fixed-input-container">
+                    <div class="input-wrapper">
+                        <button class="attach-btn">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <input type="text" id="fixedMessageInput" placeholder="Ask anything" class="message-input">
+                        <button class="send-btn" id="fixedSendBtn">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Model Parameters Panel -->
+            <div class="config-panel" id="configPanel">
+                <div class="config-header">
+                    <h3>Model Parameters</h3>
+                    <button class="close-config" id="closeConfig">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="config-content">
+                    <div class="config-group">
+                        <label for="providerSelect" class="selection-label">Model Provider</label>
+                        <select id="providerSelect" class="provider-select">
+                            <option value="openai">OpenAI</option>
+                            <option value="google">Google</option>
+                            <option value="groq">Groq</option>
+                            <option value="anthropic">Anthropic</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="modelSelect" class="selection-label">Model</label>
+                        <select id="modelSelect" class="model-select">
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="temperature">Temperature: <span id="tempValue">0.7</span></label>
+                        <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="maxTokens">Max Tokens: <span id="tokensValue">2048</span></label>
+                        <input type="range" id="maxTokens" min="1" max="4096" step="1" value="2048">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="topP">Top P: <span id="topPValue">1.0</span></label>
+                        <input type="range" id="topP" min="0" max="1" step="0.1" value="1.0">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="seed">Seed:</label>
+                        <input type="number" id="seed" placeholder="Enter seed value" class="number-input">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="stopSequence">Stop Sequence:</label>
+                        <input type="text" id="stopSequence" placeholder="Enter stop sequence" class="text-input">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="presencePenalty">Presence Penalty: <span id="presencePenaltyValue">0.0</span></label>
+                        <input type="range" id="presencePenalty" min="-2" max="2" step="0.1" value="0.0">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="frequencyPenalty">Frequency Penalty: <span id="frequencyPenaltyValue">0.0</span></label>
+                        <input type="range" id="frequencyPenalty" min="-2" max="2" step="0.1" value="0.0">
+                    </div>
+                    
+                    <div class="config-group">
+                        <label for="systemPrompt">System Prompt:</label>
+                        <textarea id="systemPrompt" placeholder="Enter system prompt..." class="system-prompt-textarea" rows="4"></textarea>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Settings Button -->
+        <button class="settings-btn" id="settingsBtn">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+    
+    <script src="backend-integration.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

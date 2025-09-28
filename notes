@@ -1,0 +1,58 @@
+GOAL:  BUILDING A SIMPLE LLM PLAYGROUND
+
+MODELS PROVIDER
+   - GOOOGLE 
+   - OPENAI
+   - GROQ
+
+MODEL SETTINGS
+   - TEMPERATURE 0 TO 2
+   - OUTPUT TOKENS 0 TO 4096
+   - PRESENCE PENALTY: -2.0 TO 2.0 -- AVOID CONCEPTS
+   - FREQUENCE PENALTY : -2.0 TO 2.0 -- AVOID REPEATING
+   - SYSTEM PROMPT : A STRING THAT SETS THE BEHAVIOR OF THE MODEL
+   - SEED : A INTEGER THAT SETS THE RANDOMNESS OF THE MODEL
+   - STOP SEQUENCE : WORD OR LIST OF CHARACTERS WHEN IT SEE , IT WILL STOP GENERATING OUTPUT
+
+GAURDRAILS
+   - PROMPT SAFETY GUARD  -- PROMPT GUARD
+   - RESPONSE SAFETY SETTINGS  - LLAMA GUARD
+
+- VOICE INPUT
+
+- VOICE OUTPUT 
+
+- CHAT HISTORY
+
+- SOME DEFAULT PROMPT TEMPLATES
+
+
+- Code checkin to github
+- finally deploy it to vercel using Trae
+
+
+models
+Google:
+gemini-2.5-flash
+gemini-2.5-pro
+gemini-2.5-flash-lite
+gemini-2.0-flash
+gemini-2.0-pro
+gemini-2.0-flash-lite
+
+Groq:
+llama-3.1-8b-instant
+gemma2-9b-it
+openai/gpt-oss-120b
+
+OPENAI:
+gpt-4
+gpt-4-turbo
+gpt-4o
+gpt-4o-mini
+gpt-3.5-turbo
+
+ANTHROPIC:
+claude-opus-4-1-20250805
+claude-opus-4-20250514
+claude-sonnet-4-20250514

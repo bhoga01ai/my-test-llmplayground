@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test Page</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        console.log('Debug test starting...');
+        
+        // Test if main page elements exist
+        fetch('/')
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const results = [];
+                
+                // Check for key elements
+                const elements = [
+                    'providerSelect',
+                    'modelSelect', 
+                    'messageInput',
+                    'sendBtn',
+                    'chatMessages'
+                ];
+                
+                elements.forEach(id => {
+                    const element = doc.getElementById(id);
+                    results.push(`${id}: ${element ? 'FOUND' : 'NOT FOUND'}`);
+                });
+                
+                // Check for prompt cards
+                const promptCards = doc.querySelectorAll('.prompt-card');
+                results.push(`Prompt cards: ${promptCards.length} found`);
+                
+                document.getElementById('test-results').innerHTML = 
+                    '<pre>' + results.join('\n') + '</pre>';
+                    
+                console.log('Test results:', results);
+            })
+            .catch(error => {
+                console.error('Test failed:', error);
+                document.getElementById('test-results').innerHTML = 
+                    '<pre>Error: ' + error.message + '</pre>';
+            });
+    </script>
+</body>
+</html>

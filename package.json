@@ -1,0 +1,25 @@
+{
+  "name": "llm-playground",
+  "version": "1.0.0",
+  "description": "LLM Playground - Interactive AI model testing interface with multiple provider support",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'Build completed - static files ready'",
+    "vercel-build": "echo 'Vercel build completed'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "joi": "^17.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["ai", "backend", "api", "models"],
+  "author": "",
+  "license": "MIT"
+}
