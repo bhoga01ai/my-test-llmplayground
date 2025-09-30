@@ -2,6 +2,13 @@
 
 An interactive AI model testing interface with support for multiple providers including OpenAI, Anthropic, Groq, and Google AI. Features a comprehensive backend service that dynamically interacts with multiple AI models through a unified API and a modern frontend interface for testing.
 
+## Screenshots
+
+![Screenshot 1](images/Screenshot%202025-09-29%20at%2012.45.38%E2%80%AFPM.png)
+![Screenshot 2](images/Screenshot%202025-09-29%20at%209.34.33%E2%80%AFPM.png)
+![Screenshot 3](images/Screenshot%202025-09-29%20at%209.34.45%E2%80%AFPM.png)
+![Screenshot 4](images/Screenshot%202025-09-29%20at%209.34.58%E2%80%AFPM.png)
+
 ## Features
 
 - **Multi-Provider Support**: OpenAI, Anthropic, Groq, and Google AI
