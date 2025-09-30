@@ -53,6 +53,17 @@
                     New chat
                 </button>
                 
+                <div class="chat-history-section">
+                    <div class="chat-history-header">
+                        <h3>Chat History</h3>
+                        <button class="clear-history-btn" onclick="llmPlayground.clearAllHistory()">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                    <div class="chat-history-list" id="chatHistory">
+                        <!-- Chat history items will be dynamically added here -->
+                    </div>
+                </div>
 
             </div>
         </div>
@@ -79,7 +90,13 @@
                                  <button class="attach-btn">
                                      <i class="fas fa-paperclip"></i>
                                  </button>
+                                 <button class="voice-input-btn" id="voiceInputBtn" title="Voice Input">
+                                     <i class="fas fa-microphone"></i>
+                                 </button>
                                  <input type="text" id="messageInput" placeholder="Ask anything" class="message-input">
+                                 <button class="voice-output-btn" id="mainVoiceOutputBtn" title="Toggle Voice Output">
+                                     <i class="fas fa-volume-up"></i>
+                                 </button>
                                  <button class="send-btn" id="sendBtn">
                                      <i class="fas fa-arrow-up"></i>
                                  </button>
@@ -129,7 +146,13 @@
                         <button class="attach-btn">
                             <i class="fas fa-paperclip"></i>
                         </button>
+                        <button class="voice-input-btn" id="fixedVoiceInputBtn" title="Voice Input">
+                            <i class="fas fa-microphone"></i>
+                        </button>
                         <input type="text" id="fixedMessageInput" placeholder="Ask anything" class="message-input">
+                        <button class="voice-output-btn" id="fixedVoiceOutputBtn" title="Toggle Voice Output">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
                         <button class="send-btn" id="fixedSendBtn">
                             <i class="fas fa-arrow-up"></i>
                         </button>
@@ -137,10 +160,10 @@
                 </div>
             </div>
             
-            <!-- Model Parameters Panel -->
+            <!-- Settings Panel -->
             <div class="config-panel" id="configPanel">
                 <div class="config-header">
-                    <h3>Model Parameters</h3>
+                    <h3>Settings</h3>
                     <button class="close-config" id="closeConfig">
                         <i class="fas fa-times"></i>
                     </button>
@@ -210,10 +233,38 @@
             </div>
         </div>
         
-        <!-- Settings Button -->
-        <button class="settings-btn" id="settingsBtn">
-            <i class="fas fa-cog"></i>
-        </button>
+        <!-- Control Buttons -->
+        <div class="control-buttons">
+            <button class="control-btn view-code-btn" id="viewCodeBtn" title="View Code">
+                <i class="fas fa-code"></i>
+            </button>
+            <button class="control-btn settings-btn" id="settingsBtn" title="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Code Modal -->
+    <div id="codeModal" class="code-modal">
+        <div class="code-modal-content">
+            <div class="code-modal-header">
+                <h3>Generated Code</h3>
+                <div class="code-type-selector">
+                    <button class="code-type-btn active" data-code-type="curl">cURL</button>
+                    <button class="code-type-btn" data-code-type="python">Python</button>
+                </div>
+                <button id="closeCodeModal" class="close-code-modal">&times;</button>
+            </div>
+            <div class="code-modal-body">
+                <pre><code id="codeDisplay"></code></pre>
+                <div class="code-modal-actions">
+                    <button id="copyCodeBtn" class="copy-code-btn">
+                        <i class="fas fa-copy"></i>
+                        Copy Code
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
     <script src="backend-integration.js"></script>

@@ -80,6 +80,10 @@
                                      <i class="fas fa-paperclip"></i>
                                  </button>
                                  <input type="text" id="messageInput" placeholder="Ask anything" class="message-input">
+                                 <button class="voice-input-btn" id="voiceInputBtn" title="Voice Input">
+                     <i class="fas fa-microphone"></i>
+                     <span style="font-size: 12px;">🎤</span>
+                 </button>
                                  <button class="send-btn" id="sendBtn">
                                      <i class="fas fa-arrow-up"></i>
                                  </button>
@@ -130,6 +134,9 @@
                             <i class="fas fa-paperclip"></i>
                         </button>
                         <input type="text" id="fixedMessageInput" placeholder="Ask anything" class="message-input">
+                        <button class="voice-input-btn" id="fixedVoiceInputBtn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
                         <button class="send-btn" id="fixedSendBtn">
                             <i class="fas fa-arrow-up"></i>
                         </button>
@@ -137,10 +144,10 @@
                 </div>
             </div>
             
-            <!-- Model Parameters Panel -->
+            <!-- Settings Panel -->
             <div class="config-panel" id="configPanel">
                 <div class="config-header">
-                    <h3>Model Parameters</h3>
+                    <h3>Settings</h3>
                     <button class="close-config" id="closeConfig">
                         <i class="fas fa-times"></i>
                     </button>
@@ -210,10 +217,19 @@
             </div>
         </div>
         
-        <!-- Settings Button -->
-        <button class="settings-btn" id="settingsBtn">
-            <i class="fas fa-cog"></i>
-        </button>
+        <!-- Control Buttons -->
+         <div class="control-buttons">
+             <button class="control-btn voice-output-btn" id="voiceOutputBtn" title="Toggle Voice Output">
+                 <i class="fas fa-volume-up"></i>
+                 <span style="font-size: 12px;">🔊</span>
+             </button>
+             <button class="control-btn view-code-btn" id="viewCodeBtn">
+                 <i class="fas fa-code"></i>
+             </button>
+             <button class="control-btn settings-btn" id="settingsBtn">
+                 <i class="fas fa-cog"></i>
+             </button>
+         </div>
     </div>
     
     <script src="backend-integration.js"></script>

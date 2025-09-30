@@ -11,6 +11,8 @@ An interactive AI model testing interface with support for multiple providers in
 - **Request Validation**: Comprehensive input validation with detailed error messages
 - **Error Handling**: Robust error handling with provider-specific error mapping
 - **Streaming Support**: Real-time streaming responses for supported providers
+- **Speech Synthesis**: Text-to-speech capabilities with Web Speech API and Gemini
+- **Voice Input**: Speech-to-text for voice-based interactions
 - **Modular Architecture**: Easy to extend with new AI providers
 - **Logging**: Comprehensive logging for monitoring and debugging
 - **CORS Support**: Cross-origin resource sharing for web applications
@@ -98,7 +100,37 @@ Returns available models for a specific provider (openai, anthropic, google).
 ```http
 POST /api/models/chat
 Content-Type: application/json
+```
 
+### Speech Synthesis
+
+```http
+POST /api/speech/synthesize
+Content-Type: application/json
+
+{
+  "text": "Text to convert to speech",
+  "model": "gemini-2.5-flash-lite",
+  "provider": "google"
+}
+```
+
+Converts text to speech using the specified provider and model. Returns audio data.
+
+### Speech Transcription
+
+```http
+POST /api/speech/transcribe
+Content-Type: application/json
+
+{
+  "audioData": "base64_encoded_audio_data",
+  "model": "gemini-2.5-flash-lite",
+  "provider": "google"
+}
+```
+
+Transcribes speech to text using the specified provider and model.
 {
   "prompt": "Explain quantum computing in simple terms",
   "model": "gpt-4",

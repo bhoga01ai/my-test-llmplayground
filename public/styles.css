@@ -415,6 +415,8 @@ body {
     background-color: #f7f7f8;
     position: relative;
     contain: layout size; /* Improve performance by containing layout changes */
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
 }
 
 .chat-center-section {
@@ -643,15 +645,51 @@ body {
 .attach-btn {
     background: none;
     border: none;
-    color: #8e8ea0;
+    color: #666;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
+    padding: 12px;
+    border-radius: 8px;
     transition: color 0.2s;
 }
 
 .attach-btn:hover {
-    color: #2d2d2d;
+    color: #333;
+}
+
+.voice-input-btn {
+    background: #f0f0f0;
+    border: 2px solid #007aff;
+    color: #007aff;
+    cursor: pointer;
+    padding: 12px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.voice-input-btn:hover {
+    color: #667eea;
+    transform: scale(1.05);
+}
+
+.voice-input-btn.recording {
+    color: #ff4757;
+    animation: pulse 1.5s infinite;
+}
+
+.voice-input-btn.processing {
+    color: #ffa502;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
 .message-input {
@@ -846,29 +884,95 @@ body {
     border-color: #d1d5db;
 }
 
-/* Settings Button */
-.settings-btn {
+/* Control Buttons Container */
+.control-buttons {
     position: fixed;
     bottom: 24px;
     right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: rgba(45, 45, 45, 0.95);
+    border: 2px solid #4a4a4a;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    z-index: 999;
+}
+
+/* Individual Control Button Styles */
+.control-btn {
     width: 48px;
     height: 48px;
-    background-color: #2d2d2d;
-    border: none;
+    background-color: #3a3a3a;
+    border: 1px solid #555;
     color: white;
-    border-radius: 50%;
+    border-radius: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    transition: background-color 0.2s, transform 0.2s;
-    z-index: 999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+    font-size: 16px;
+}
+
+.control-btn:hover {
+    background-color: #4a4a4a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.control-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Specific button styles */
+.voice-output-btn {
+    background: linear-gradient(135deg, #26de81 0%, #20bf6b 100%);
+    border-color: #26de81;
+}
+
+.voice-output-btn:hover {
+    background: linear-gradient(135deg, #20bf6b 0%, #1dd1a1 100%);
+}
+
+.voice-output-btn.disabled {
+    background: linear-gradient(135deg, #ff4757 0%, #ff3742 100%);
+    border-color: #ff4757;
+}
+
+.voice-output-btn.disabled:hover {
+    background: linear-gradient(135deg, #ff3742 0%, #ff2f3a 100%);
+}
+
+.voice-output-btn.speaking {
+    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+    animation: pulse 1.5s infinite;
+}
+
+.voice-output-btn.speaking:hover {
+    background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
+}
+
+.view-code-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: #667eea;
+}
+
+.view-code-btn:hover {
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.settings-btn {
+    background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+    border-color: #555;
 }
 
 .settings-btn:hover {
-    background-color: #1a1a1a;
-    transform: scale(1.05);
+    background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
 }
 
 /* Responsive Design */
@@ -940,6 +1044,27 @@ body {
     .fixed-input-container {
         width: calc(100% - 20px);
         max-width: 90%;
+    }
+    
+    .control-buttons {
+        bottom: 16px;
+        right: 16px;
+        padding: 12px;
+    }
+    
+    .control-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 14px;
+    }
+    
+    .code-panel {
+        width: 100vw;
+        right: -100vw;
+    }
+    
+    .code-panel.open {
+        right: 0;
     }
 }
 
@@ -1016,6 +1141,82 @@ body {
     background-color: #1a1a1a;
 }
 
+/* Code Panel Styles */
+.code-panel {
+    position: fixed;
+    top: 70px;
+    right: -400px;
+    width: 400px;
+    height: calc(100vh - 70px);
+    background-color: #1e1e1e;
+    border-left: 1px solid #333;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    transition: right 0.3s ease;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.code-panel.open {
+    right: 0;
+}
+
+.code-header {
+    padding: 20px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #2d2d2d;
+}
+
+.code-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.close-code {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.close-code:hover {
+    color: #fff;
+    background-color: #444;
+}
+
+.code-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+}
+
+.code-content pre {
+    margin: 0;
+    padding: 16px;
+    background-color: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    color: #c9d1d9;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow-x: auto;
+}
+
+.code-content code {
+    color: #c9d1d9;
+    background: none;
+}
+
 /* Loading Animation */
 .typing-indicator {
     display: flex;
@@ -1047,5 +1248,52 @@ body {
     30% {
         transform: translateY(-10px);
         opacity: 1;
+    }
+}
+
+/* Voice Notifications */
+.voice-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    z-index: 10000;
+    animation: slideInRight 0.3s ease-out;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.voice-notification.info {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+}
+
+.voice-notification.error {
+    background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+}
+
+.voice-notification.success {
+    background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .voice-notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
     }
 }

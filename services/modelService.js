@@ -320,6 +320,8 @@ class GoogleAIService extends BaseModelService {
   constructor(config) {
     super('google', config);
     this.baseURL = config.baseUrl || 'https://generativelanguage.googleapis.com';
+    this.speechToTextEnabled = true;
+    this.textToSpeechEnabled = true;
   }
 
   async generateCompletion({ prompt, model, parameters }) {
@@ -373,6 +375,199 @@ class GoogleAIService extends BaseModelService {
     const result = await this.generateCompletion({ prompt, model, parameters });
     onChunk({ content: result.content, type: 'content' });
     onChunk({ type: 'done' });
+  }
+  
+  /**
+   * Transcribe speech to text using Gemini model
+   * @param {Object} options - Transcription options
+   * @param {ArrayBuffer} options.audioData - Audio data as ArrayBuffer
+   * @param {string} options.model - Model name (defaults to gemini-2.5-flash-lite)
+   * @returns {Promise<Object>} Transcription result
+   */
+  async transcribeSpeech({ audioData, model = 'gemini-2.5-flash-lite' }) {
+    if (!this.speechToTextEnabled) {
+      throw new ConfigurationError('Speech-to-text is not enabled for this provider', 'google');
+    }
+    
+    try {
+      // Convert audio data to base64
+      const audioBase64 = Buffer.from(audioData, 'base64').toString('base64');
+      
+      // Log audio data length for debugging
+      logger.debug(`Audio data length: ${audioBase64.length} characters`);
+      
+      const response = await axios.post(
+        `${this.baseURL}/v1beta/models/${model}:generateContent`,
+        {
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: "audio/wav", data: audioBase64 } }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            topP: 0.8,
+            topK: 40
+          },
+          tools: [{
+            functionDeclarations: [{
+              name: "speech_to_text",
+              description: "Convert speech audio to text",
+              parameters: {
+                type: "object",
+                properties: {
+                  text: {
+                    type: "string",
+                    description: "The transcribed text from the audio"
+                  }
+                },
+                required: ["text"]
+              }
+            }]
+          }]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          params: {
+            key: this.config.apiKey
+          },
+          timeout: 60000
+        }
+      );
+      
+      // Log the response structure for debugging
+      logger.debug('Google AI speech transcription response:', JSON.stringify(response.data, null, 2));
+      
+      const candidate = response.data.candidates?.[0];
+      if (!candidate) {
+        throw new APIError('No transcription generated', 'GOOGLE_AI_NO_RESPONSE');
+      }
+      
+      // Check for function call response
+      const functionCallPart = candidate.content.parts.find(part => part.functionCall?.name === 'speech_to_text');
+      if (functionCallPart) {
+        const args = JSON.parse(functionCallPart.functionCall.args);
+        return {
+          text: args.text,
+          metadata: {
+            model: model,
+            finish_reason: candidate.finishReason
+          }
+        };
+      }
+      
+      // Fallback to regular text response
+      return {
+        text: candidate.content.parts[0].text,
+        metadata: {
+          model: model,
+          finish_reason: candidate.finishReason
+        }
+      };
+    } catch (error) {
+      this.handleApiError(error, 'Google AI speech transcription');
+    }
+  }
+  
+  /**
+   * Generate speech from text using Gemini model
+   * @param {Object} options - Speech synthesis options
+   * @param {string} options.text - Text to convert to speech
+   * @param {string} options.model - Model name (defaults to gemini-2.5-flash-lite)
+   * @returns {Promise<Object>} Speech synthesis result with audio data
+   */
+  async generateSpeech({ text, model = 'gemini-2.5-flash-lite' }) {
+    if (!this.textToSpeechEnabled) {
+      throw new ConfigurationError('Text-to-speech is not enabled for this provider', 'google');
+    }
+    
+    try {
+      // Use the proper Gemini API endpoint for text-to-speech
+      const response = await axios.post(
+        `${this.baseURL}/v1beta/models/${model}:generateContent`,
+        {
+          contents: [{
+            parts: [{ text }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            topP: 0.8,
+            topK: 40
+          },
+          tools: [{
+            functionDeclarations: [{
+              name: "text_to_speech",
+              description: "Convert text to speech audio",
+              parameters: {
+                type: "object",
+                properties: {
+                  text: {
+                    type: "string",
+                    description: "The text to convert to speech"
+                  }
+                },
+                required: ["text"]
+              }
+            }]
+          }]
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          params: {
+            key: this.config.apiKey
+          },
+          timeout: 60000
+        }
+      );
+      
+      // Log the response structure for debugging
+      logger.debug('Google AI speech synthesis response:', JSON.stringify(response.data, null, 2));
+      
+      const candidate = response.data.candidates?.[0];
+      if (!candidate) {
+        throw new APIError('No speech generated', 'GOOGLE_AI_NO_RESPONSE');
+      }
+      
+      // Extract audio data from response
+      const audioData = candidate.content.parts.find(part => part.functionCall?.name === 'text_to_speech' || part.inline_data?.mime_type?.startsWith('audio/'));
+      
+      if (!audioData) {
+        throw new APIError('No audio data in response', 'GOOGLE_AI_NO_AUDIO');
+      }
+      
+      // Handle different response formats
+      if (audioData.inline_data) {
+        return {
+          audioData: Buffer.from(audioData.inline_data.data, 'base64'),
+          mimeType: audioData.inline_data.mime_type || 'audio/wav',
+          metadata: {
+            model: model,
+            finish_reason: candidate.finishReason
+          }
+        };
+      } else if (audioData.functionCall) {
+        // If the response contains a function call with audio data
+        const args = JSON.parse(audioData.functionCall.args);
+        if (args.audio_data) {
+          return {
+            audioData: Buffer.from(args.audio_data, 'base64'),
+            mimeType: args.mime_type || 'audio/wav',
+            metadata: {
+              model: model,
+              finish_reason: candidate.finishReason
+            }
+          };
+        }
+      }
+      
+      throw new APIError('Unexpected response format from Gemini API', 'GOOGLE_AI_UNEXPECTED_FORMAT');
+    } catch (error) {
+      this.handleApiError(error, 'Google AI speech synthesis');
+    }
   }
 }
 

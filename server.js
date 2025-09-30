@@ -5,6 +5,8 @@ const path = require('path');
 const { validateEnvironment } = require('./config/environment');
 const { validateRequest } = require('./middleware/validation');
 const modelRoutes = require('./routes/models');
+const chatHistoryRoutes = require('./routes/chatHistory');
+const speechRoutes = require('./routes/speech');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
 
@@ -49,15 +51,15 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/models', modelRoutes);
+app.use('/api', chatHistoryRoutes);
+app.use('/api/speech', speechRoutes);
 
-// Serve static files in development
-if (process.env.NODE_ENV !== 'production') {
-  app.use(express.static(path.join(__dirname)));
-  
-  app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-  });
-}
+// Serve static files
+app.use(express.static(path.join(__dirname)));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Error handling middleware
 app.use(errorHandler);
