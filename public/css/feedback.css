@@ -1,0 +1,79 @@
+/* Feedback button styles */
+.message-feedback {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.feedback-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+.feedback-btn {
+    background: none;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #666;
+}
+
+.feedback-btn:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.feedback-btn.selected.thumbs-up {
+    background-color: #e6f7e6;
+    border-color: #4caf50;
+    color: #4caf50;
+}
+
+.feedback-btn.selected.thumbs-down {
+    background-color: #ffeaea;
+    border-color: #f44336;
+    color: #f44336;
+}
+
+.feedback-label {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    border-radius: 4px;
+    color: white;
+    font-size: 14px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.notification.success {
+    background-color: #4caf50;
+}
+
+.notification.error {
+    background-color: #f44336;
+}

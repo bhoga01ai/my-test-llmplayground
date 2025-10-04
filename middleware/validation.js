@@ -123,6 +123,8 @@ function validateModelProvider(model, provider) {
 function validateModelCompatibility(req, res, next) {
   const { model, provider } = req.validatedData;
   
+  logger.info('Validating model compatibility', { model, provider });
+
   if (!validateModelProvider(model, provider)) {
     logger.warn('Model-provider compatibility check failed', {
       model,
