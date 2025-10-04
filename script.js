@@ -1231,6 +1231,12 @@ class LLMPlayground {
         
         return messageDiv;
     }
+
+    displayMessage(role, content) {
+        const messageElement = this.createMessageElement(role, content);
+        this.chatMessages.appendChild(messageElement);
+        this.scrollToBottom();
+    }
     
     showTypingIndicator() {
         const typingDiv = document.createElement('div');

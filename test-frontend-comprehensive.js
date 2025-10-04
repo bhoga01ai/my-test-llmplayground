@@ -68,9 +68,9 @@ class ComprehensiveFrontendTester {
         console.log('\n🔍 Testing frontend file structure...');
         
         const files = [
-            { name: 'index.html', required: true },
-            { name: 'script.js', required: true },
-            { name: 'style.css', required: true }
+            { name: 'public/index.html', required: true },
+            { name: 'public/script.js', required: true },
+            { name: 'public/styles.css', required: true }
         ];
 
         for (const file of files) {

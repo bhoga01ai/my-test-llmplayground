@@ -23,9 +23,9 @@ const requestSchema = Joi.object({
     // Groq models
     'llama-3.1-8b-instant', 'gemma2-9b-it', 'openai/gpt-oss-120b',
     // Google models
-    'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite',
+    'gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-pro',
     // Anthropic models
-    'claude-opus-4-1-20250805', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514'
+    'claude-opus-4-1-20250805', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-haiku'
   ).messages({
     'any.only': 'Invalid model selection',
     'any.required': 'Model selection is required'
@@ -107,8 +107,8 @@ function validateModelProvider(model, provider) {
   const modelProviderMap = {
     openai: ['gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
     groq: ['llama-3.1-8b-instant', 'gemma2-9b-it', 'openai/gpt-oss-120b'],
-    google: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite'],
-    anthropic: ['claude-opus-4-1-20250805', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514']
+    google: ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-pro'],
+    anthropic: ['claude-opus-4-1-20250805', 'claude-opus-4-20250514', 'claude-sonnet-4-20250514', 'claude-3-haiku']
   };
   
   return modelProviderMap[provider]?.includes(model) || false;
