@@ -6,6 +6,7 @@
 class BackendAPIClient {
   constructor(baseUrl = 'http://localhost:3001') {
     this.baseUrl = baseUrl;
+    this.uploadedFiles = []; // Store uploaded file contents
     console.log('BackendAPIClient initialized with baseUrl:', this.baseUrl);
   }
 
@@ -61,12 +62,60 @@ class BackendAPIClient {
    * @param {string} options.prompt - The user prompt
    * @param {string} options.model - Model identifier
    * @param {string} options.provider - Provider name
+   * @param {Array} options.conversation_history - Previous messages in the conversation
    * @param {Object} options.parameters - Model parameters
    * @returns {Promise<Object>} Chat completion response
    */
-  async chatCompletion({ prompt, model, provider, parameters = {} }) {
+  /**
+   * Add uploaded file to the client's storage
+   * @param {Object} fileData - File data object
+   * @param {string} fileData.name - File name
+   * @param {string} fileData.content - File content
+   * @param {string} fileData.type - File type
+   */
+  addUploadedFile(fileData) {
+    this.uploadedFiles.push(fileData);
+    console.log(`Added file to backend client storage: ${fileData.name}`);
+  }
+
+  /**
+   * Clear all uploaded files
+   */
+  clearUploadedFiles() {
+    this.uploadedFiles = [];
+    console.log('Cleared all uploaded files from backend client storage');
+  }
+
+  /**
+   * Get all uploaded file contents formatted for the model
+   * @returns {string} Formatted file contents
+   */
+  getUploadedFilesContent() {
+    if (this.uploadedFiles.length === 0) return '';
+    
+    let content = '\n\n--- Uploaded Files ---\n';
+    this.uploadedFiles.forEach((file, index) => {
+      content += `\n**File: ${file.name}** [file-${index + 1}]\n`;
+      content += file.content + '\n';
+    });
+    
+    return content;
+  }
+
+  async chatCompletion({ prompt, model, provider, conversation_history = [], parameters = {} }) {
     try {
-      console.log('Sending chat completion request:', { prompt, model, provider, parameters });
+      // Add file content to the prompt if files are uploaded
+      const fileContent = this.getUploadedFilesContent();
+      const fullPrompt = fileContent ? prompt + fileContent : prompt;
+      
+      console.log('Sending chat completion request:', { 
+        prompt: fullPrompt.length > 100 ? fullPrompt.substring(0, 100) + '...' : fullPrompt, 
+        model, 
+        provider, 
+        conversation_history: conversation_history.length, 
+        parameters,
+        hasFileContent: fileContent.length > 0
+      });
       
       const response = await fetch(`${this.baseUrl}/api/models/chat`, {
         method: 'POST',
@@ -74,9 +123,10 @@ class BackendAPIClient {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          prompt,
+          prompt: fullPrompt,
           model,
           provider,
+          conversation_history,
           parameters
         })
       });
@@ -85,7 +135,17 @@ class BackendAPIClient {
       console.log('Chat completion response:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}: ${response.statusText}`);
+        // Extract more detailed error information if available
+        const errorMessage = data.message || `HTTP ${response.status}: ${response.statusText}`;
+        const errorDetails = data.details || data.error || '';
+        
+        console.error('API Error:', {
+          status: response.status,
+          message: errorMessage,
+          details: errorDetails
+        });
+        
+        throw new Error(errorMessage + (errorDetails ? ` (${errorDetails})` : ''));
       }
 
       // The API returns a nested response structure
@@ -111,13 +171,25 @@ class BackendAPIClient {
    */
   async streamChatCompletion({ prompt, model, provider, parameters = {} }, onChunk, onComplete, onError) {
     try {
+      // Add file content to the prompt if files are uploaded
+      const fileContent = this.getUploadedFilesContent();
+      const fullPrompt = fileContent ? prompt + fileContent : prompt;
+      
+      console.log('Sending streaming chat completion request:', { 
+        prompt: fullPrompt.length > 100 ? fullPrompt.substring(0, 100) + '...' : fullPrompt, 
+        model, 
+        provider, 
+        parameters,
+        hasFileContent: fileContent.length > 0
+      });
+      
       const response = await fetch(`${this.baseUrl}/api/models/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          prompt,
+          prompt: fullPrompt,
           model,
           provider,
           parameters

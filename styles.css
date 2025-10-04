@@ -299,7 +299,7 @@ body {
     flex-direction: column;
     background-color: #f7f7f8;
     position: relative;
-    margin-right: 350px;
+    margin-right: 300px; /* Match the width of the config panel */
 }
 
 /* Unified Title Section Styles */
@@ -539,9 +539,10 @@ body {
     padding: 20px;
     height: 100vh;
     overflow: hidden;
-    background-color: #f7f7f8;
+    background-color: #f0f8ff;
     position: relative;
     contain: layout size; /* Improve performance by containing layout changes */
+    border: 1px solid #ccc;
 }
 
 .chat-center-section {
@@ -704,6 +705,51 @@ body {
     margin: 20px 0;
 }
 
+/* File Upload Styles */
+.file-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0 0 10px 0;
+    padding: 8px;
+    min-height: 30px;
+    width: 100%;
+}
+
+.file-chip {
+    display: flex;
+    align-items: center;
+    background-color: #f0f7ff;
+    border: 1px solid #cce5ff;
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 12px;
+    max-width: 200px;
+    overflow: hidden;
+}
+
+.file-chip-icon {
+    margin-right: 6px;
+    color: #0066cc;
+}
+
+.file-chip-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-chip-remove {
+    margin-left: 6px;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.file-chip-remove:hover {
+    color: #ff3333;
+}
+
 /* Gemini Toggle Button Styles have been removed */
 
 /* Make sure the center section input is always visible */
@@ -759,6 +805,24 @@ body {
     line-height: 1.5;
 }
 
+/* Citation styling */
+.citation {
+    display: inline-block;
+    background-color: rgba(0, 123, 255, 0.1);
+    color: #0056b3;
+    border-radius: 3px;
+    padding: 0 4px;
+    margin: 0 2px;
+    font-size: 0.85em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.citation:hover {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
 .message.user .message-content {
     background-color: #007aff;
     color: white;
@@ -798,13 +862,20 @@ body {
 }
 
 .attach-btn {
-    background: none;
-    border: none;
-    color: #8e8ea0;
+    background-color: #ff5500;
+    border: 2px solid #000;
+    color: white;
     cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: color 0.2s;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-right: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
 .attach-btn:hover {
@@ -925,12 +996,12 @@ body {
     100% { transform: scale(1); }
 }
 
-/* Configuration Panel */
+/* Configuration Panel - Now fixed on right side */
 .config-panel {
     position: fixed;
     top: 0;
-    right: -350px; /* Start off-screen */
-    width: 350px;
+    right: 0;
+    width: 300px;
     height: 100vh;
     background-color: #ffffff;
     border-left: 1px solid #e5e5e5;
@@ -938,44 +1009,36 @@ body {
     z-index: 1000;
     overflow-y: auto;
     display: block;
-    transform: translateX(0);
-    transition: right 0.3s ease; /* Smooth transition */
-}
-
-.config-panel.open {
-    right: 0;
 }
 
 .config-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
-    padding: 20px 24px;
+    padding: 16px;
+    background-color: #f0f0f0;
     border-bottom: 1px solid #e5e5e5;
 }
 
 .config-header h3 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 600;
     color: #2d2d2d;
-}
-
-.close-config {
-    background: none;
-    border: none;
-    color: #8e8ea0;
-    cursor: pointer;
-    padding: 4px;
-    border-radius: 4px;
-    transition: color 0.2s;
-}
-
-.close-config:hover {
-    color: #2d2d2d;
+    margin: 0;
 }
 
 .config-content {
-    padding: 24px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 53px); /* Subtract header height */
+    overflow-y: auto;
+}
+
+.config-actions {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid #e5e5e5;
 }
 
 .config-group {
@@ -1155,44 +1218,45 @@ body {
 
 /* Control Buttons */
 .control-buttons {
-    position: fixed;
-    top: 80px;
+    position: absolute;
+    top: 50%;
     right: 24px;
     display: flex;
     flex-direction: row;
-    gap: 16px;
-    background-color: #f0f0f0;
-    padding: 16px;
-    border-radius: 16px;
+    gap: 10px;
+    transform: translateY(-50%);
     z-index: 999;
+    background-color: rgba(0, 0, 0, 0.1);
+    padding: 6px;
+    border-radius: 8px;
 }
 
 /* Individual Control Button Styles */
 .control-btn {
-    width: 48px;
-    height: 48px;
-    background-color: #3a3a3a;
-    border: 1px solid #555;
+    width: 32px;
+    height: 32px;
+    background-color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     color: white;
-    border-radius: 12px;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
     transition: all 0.2s ease;
-    font-size: 16px;
+    font-size: 14px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .control-btn:hover {
-    background-color: #4a4a4a;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: scale(1.05);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
 .control-btn:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    transform: scale(0.95);
 }
 
 /* Specific button styles */
@@ -1279,29 +1343,51 @@ body {
     background-color: transparent;
 }
 
-/* View Code Button */
+/* View Code Button - Now at top of right panel */
+.view-code-container {
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: flex-start;
+    padding-left: 16px;
+    background: transparent;
+}
+
 .view-code-btn {
     position: relative;
-    padding: 10px 16px;
     background-color: #4a6bdf;
     border: none;
     color: white;
-    border-radius: 25px;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    font-size: 15px;
+    padding: 10px;
+    width: auto;
+    font-size: 14px;
     font-weight: 500;
-    box-shadow: 0 4px 12px rgba(74, 107, 223, 0.3);
-    transition: background-color 0.2s, transform 0.2s;
-    margin-top: 10px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(74, 107, 223, 0.3);
+    margin: 0 auto;
+}
+
+.view-code-btn .fa-stack {
+    font-size: 0.8em;
+    margin: 0;
+}
+
+.view-code-btn .fa-circle {
+    color: white;
+}
+
+.view-code-btn .fa-code {
+    color: #4a6bdf;
 }
 
 .view-code-btn:hover {
-    background-color: #3a5bc9;
-    transform: scale(1.05);
+    background-color: #3a5bcf;
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 4px 8px rgba(74, 107, 223, 0.4);
 }
 
 /* View Code Button in Input Wrapper */

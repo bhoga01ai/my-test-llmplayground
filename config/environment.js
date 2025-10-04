@@ -27,7 +27,12 @@ const envSchema = Joi.object({
   GOOGLE_AI_API_KEY: Joi.string().optional(),
   GOOGLE_AI_BASE_URL: Joi.string().uri().default('https://generativelanguage.googleapis.com'),
   
-
+  // Llama Guard configuration
+  LLAMA_GUARD_API_KEY: Joi.string().optional(),
+  LLAMA_GUARD_BASE_URL: Joi.string().uri().default('https://api.openai.com/v1'),
+  LLAMA_GUARD_RESPONSE_MODEL: Joi.string().default('meta-llama/Llama-Guard-3-8B'),
+  LLAMA_GUARD_PROMPT_MODEL: Joi.string().default('meta-llama/Llama-Prompt-Guard-2-86M'),
+  ENABLE_GUARDRAILS: Joi.boolean().default(true),
   
   // Default model parameters
   DEFAULT_TEMPERATURE: Joi.number().min(0).max(2).default(0.7),
@@ -53,7 +58,8 @@ function validateEnvironment() {
   const hasApiKey = value.OPENAI_API_KEY || 
                    value.ANTHROPIC_API_KEY || 
                    value.GROQ_API_KEY ||
-                   value.GOOGLE_AI_API_KEY;
+                   value.GOOGLE_AI_API_KEY ||
+                   value.LLAMA_GUARD_API_KEY;
   
   if (!hasApiKey && value.NODE_ENV === 'production') {
     throw new Error('At least one AI model API key must be provided in production');
@@ -67,6 +73,7 @@ function validateEnvironment() {
   if (value.ANTHROPIC_API_KEY) availableProviders.push('Anthropic');
   if (value.GROQ_API_KEY) availableProviders.push('Groq');
   if (value.GOOGLE_AI_API_KEY) availableProviders.push('Google AI');
+  if (value.LLAMA_GUARD_API_KEY) availableProviders.push('Llama Guard');
   
   logger.info(`Available AI providers: ${availableProviders.join(', ') || 'None (development mode)'}`);
   
@@ -99,6 +106,14 @@ function getProviderConfig(provider) {
       apiKey: process.env.GOOGLE_AI_API_KEY,
       baseUrl: process.env.GOOGLE_AI_BASE_URL,
       available: !!process.env.GOOGLE_AI_API_KEY
+    },
+    llamaGuard: {
+      apiKey: process.env.LLAMA_GUARD_API_KEY,
+      baseUrl: process.env.LLAMA_GUARD_BASE_URL,
+      responseModel: process.env.LLAMA_GUARD_RESPONSE_MODEL,
+      promptModel: process.env.LLAMA_GUARD_PROMPT_MODEL,
+      enabled: process.env.ENABLE_GUARDRAILS === 'true',
+      available: !!process.env.LLAMA_GUARD_API_KEY
     }
   };
   

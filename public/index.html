@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>my-test-llmplayground</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -75,10 +79,30 @@
                         
                         <!-- Input Container -->
                          <div class="input-container">
+                             <!-- File Upload Chips Container -->
+                             <div class="file-chips-container" id="fileChipsContainer" style="display: none;">
+                                 <!-- File chips will be dynamically added here -->
+                             </div>
+                             
+                             <!-- Send Files Button -->
+                             <button id="sendFilesBtn" style="display: none; margin: 5px 0; padding: 5px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                                 <i class="fas fa-paper-plane"></i> Send Files
+                             </button>
+                             
+                             <!-- Hidden File Input -->
+                             <input type="file" id="fileInput" accept=".txt,.pdf,.json,.md,.csv" multiple style="display: none;">
+                             
+                             <!-- Direct File Upload Button -->
+                              <div style="text-align: center; margin: 10px 0;">
+                                  <label for="fileInput" style="display: inline-block; padding: 10px 20px; background: #ff4500; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                                      📁 UPLOAD FILES 📁
+                                  </label>
+                              </div>
+                             
                              <div class="input-wrapper">
-                                 <button class="attach-btn">
-                                     <i class="fas fa-paperclip"></i>
-                                 </button>
+                                 <a href="#" class="attach-btn" id="attachBtn" onclick="window.openFileInput(); return false;">
+                                       <i class="fas fa-plus fa-2x"></i>
+                                   </a>
                                  <input type="text" id="messageInput" placeholder="Ask anything" class="message-input">
                                  <button class="voice-input-btn" id="voiceInputBtn" title="Voice Input">
                      <i class="fas fa-microphone"></i>
@@ -130,9 +154,9 @@
                 <!-- Fixed Input Container (shown when chat has messages) -->
                 <div class="fixed-input-container">
                     <div class="input-wrapper">
-                        <button class="attach-btn">
-                            <i class="fas fa-paperclip"></i>
-                        </button>
+                        <a href="#" class="attach-btn" id="fixedAttachBtn" onclick="window.openFileInput(); return false;">
+                            <i class="fas fa-plus fa-2x"></i>
+                        </a>
                         <input type="text" id="fixedMessageInput" placeholder="Ask anything" class="message-input">
                         <button class="voice-input-btn" id="fixedVoiceInputBtn">
                             <i class="fas fa-microphone"></i>

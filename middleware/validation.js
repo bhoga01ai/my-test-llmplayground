@@ -10,6 +10,13 @@ const requestSchema = Joi.object({
     'any.required': 'Prompt is required'
   }),
   
+  conversation_history: Joi.array().items(
+    Joi.object({
+      role: Joi.string().valid('user', 'assistant', 'system').required(),
+      content: Joi.string().required()
+    })
+  ).optional(),
+  
   model: Joi.string().required().valid(
     // OpenAI models
     'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo',
@@ -83,6 +90,7 @@ function validateRequest(req, res, next) {
     model: value.model,
     provider: value.provider,
     promptLength: value.prompt.length,
+    hasConversationHistory: !!value.conversation_history,
     duration: Date.now() - startTime
   });
   

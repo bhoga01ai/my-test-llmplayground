@@ -15,7 +15,10 @@ class LLMPlayground {
         
         // Voice functionality state
         this.isRecording = false;
+        this.fromVoice = false;
         this.currentVoiceInputFixed = false;
+        this.voiceInputAnnounced = false;
+        this.speechDetectionTimeout = null;
         
         // Load voice output preference from localStorage or default to true
         const savedVoiceOutputPref = localStorage.getItem('voiceOutputEnabled');
@@ -23,6 +26,12 @@ class LLMPlayground {
             savedVoiceOutputPref === 'true' : true;
         
         this.recognition = null;
+        
+        // File upload state
+        this.uploadedFiles = [];
+        this.maxFileSize = 1024 * 1024; // 1MB in bytes
+        this.allowedFileTypes = ['text/plain', 'application/pdf', 'application/json', 'text/markdown', 'text/csv'];
+        this.allowedExtensions = ['.txt', '.pdf', '.json', '.md', '.csv'];
         
         this.initializeElements();
         this.bindEvents();
@@ -44,6 +53,14 @@ class LLMPlayground {
         
         // Initialize speech synthesis
         this.initializeSpeechSynthesis();
+        
+        // Initialize file upload functionality
+        this.initializeFileUpload();
+        
+        // Set PDF.js worker path
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
         
         // Load chat history on initialization
         this.loadChatHistoryList();
@@ -353,22 +370,14 @@ class LLMPlayground {
     }
     
     toggleConfigPanel() {
-        this.configPanel.classList.toggle('open');
-        // Update settings button text based on panel state
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-cog';
-        
-        this.settingsBtn.innerHTML = '';
-        this.settingsBtn.appendChild(icon);
+        // Add a small delay to ensure the DOM is ready
+        setTimeout(() => {
+            this.configPanel.classList.toggle('open');
+        }, 0);
     }
     
     closeConfigPanel() {
         this.configPanel.classList.remove('open');
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-cog';
-        
-        this.settingsBtn.innerHTML = '';
-        this.settingsBtn.appendChild(icon);
     }
     
     addTooltips() {
@@ -445,6 +454,11 @@ class LLMPlayground {
             this.recognition.lang = 'en-US'; // Set language to English (US)
             this.recognition.maxAlternatives = 5; // Get more alternatives for better accuracy
             
+            // Add service-specific settings for better performance
+            if (this.recognition.serviceURI) {
+                this.recognition.serviceURI = 'wss://www.google.com/speech-api/v2/recognize';
+            }
+            
             // Event handler for when speech recognition starts
             this.recognition.onstart = () => {
                 console.log('Speech recognition started - ready to detect speech');
@@ -505,20 +519,29 @@ class LLMPlayground {
                 this.isRecording = false;
                 this.updateVoiceButtonState();
                 
+                // Clear any pending speech detection timeout
+                if (this.speechDetectionTimeout) {
+                    clearTimeout(this.speechDetectionTimeout);
+                    this.speechDetectionTimeout = null;
+                }
+                
                 let errorMessage = 'Voice input failed';
                 switch (event.error) {
                     case 'no-speech':
                         errorMessage = 'No speech detected. Please check your microphone and speak clearly.';
-                        console.log('No speech detected - implementing robust recovery strategy');
+                        console.log('No speech detected - will restart recognition');
                         
-                        // Don't stop recognition completely - just show a notification
-                        this.isRecording = true; // Keep recording state true
+                        // Reset recording state properly
+                        this.isRecording = false;
+                        this.updateVoiceButtonState();
                         
-                        // Show a more prominent notification
-                        this.showNotification('⚠️ No speech detected. Please speak louder or check your microphone settings', 'warning');
+                        // Show a notification
+                        this.showNotification('⚠️ No speech detected. Click the microphone button to try again', 'warning');
                         
-                        // Don't automatically restart since that can cause a loop
-                        // Instead, keep the current recognition session active
+                        // Reset the input placeholder
+                        const messageInput = this.currentVoiceInputFixed ? this.fixedMessageInput : this.messageInput;
+                        messageInput.placeholder = 'Type a message or use voice input...';
+                        
                         return; // Skip the rest of the error handler
                     case 'audio-capture':
                         errorMessage = 'Microphone not accessible. Please check permissions.';
@@ -544,6 +567,12 @@ class LLMPlayground {
                 console.log('Speech recognition ended');
                 this.isRecording = false;
                 this.updateVoiceButtonState();
+                
+                // Clear any pending speech detection timeout
+                if (this.speechDetectionTimeout) {
+                    clearTimeout(this.speechDetectionTimeout);
+                    this.speechDetectionTimeout = null;
+                }
                 
                 // Reset the input placeholder
                 const messageInput = this.currentVoiceInputFixed ? this.fixedMessageInput : this.messageInput;
@@ -597,7 +626,416 @@ class LLMPlayground {
         }
     }
     
+    /**
+     * Initialize file upload functionality
+     */
+    initializeFileUpload() {
+        this.fileInput = document.getElementById('fileInput');
+        this.fileChipsContainer = document.getElementById('fileChipsContainer');
+        this.uploadFileBtn = document.getElementById('uploadFileBtn');
+        this.sendFilesBtn = document.getElementById('sendFilesBtn');
+        
+        // Add event listener for the standalone upload button
+        if (this.uploadFileBtn && this.fileInput) {
+            this.uploadFileBtn.addEventListener('click', (e) => {
+                console.log('Upload button clicked');
+                e.preventDefault();
+                this.fileInput.click();
+            });
+        }
+        
+        // Add a document-level event listener for the attach button and its icon
+        document.addEventListener('click', (e) => {
+            // Check if the click is on the plus icon or the button itself
+            const isPlusIcon = e.target.tagName === 'I' && e.target.classList.contains('fa-plus');
+            const isAttachBtn = e.target.id === 'attachBtn' || e.target.classList.contains('attach-btn');
+            
+            if ((isPlusIcon || isAttachBtn) && this.fileInput) {
+                console.log('Attach button or plus icon clicked');
+                e.preventDefault();
+                e.stopPropagation();
+                this.fileInput.click();
+            }
+        });
+        
+        // File input change handler
+        if (this.fileInput) {
+            this.fileInput.addEventListener('change', (e) => {
+                console.log('File input changed:', e.target.files);
+                this.handleFileSelection(e.target.files);
+            });
+            
+            // Drag and drop functionality
+            this.initializeDragAndDrop();
+        }
+        
+        // Add event listener for the Send Files button
+        if (this.sendFilesBtn) {
+            this.sendFilesBtn.addEventListener('click', (e) => {
+                console.log('Send Files button clicked');
+                e.preventDefault();
+                // Send only files without a message
+                this.sendMessage(false, true);
+            });
+        }
+    }
+    
+    /**
+     * Initialize drag and drop functionality
+     */
+    initializeDragAndDrop() {
+        const inputContainer = document.querySelector('.input-container');
+        
+        if (inputContainer) {
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                inputContainer.addEventListener(eventName, this.preventDefaults, false);
+                document.body.addEventListener(eventName, this.preventDefaults, false);
+            });
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                inputContainer.addEventListener(eventName, () => this.highlight(inputContainer), false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                inputContainer.addEventListener(eventName, () => this.unhighlight(inputContainer), false);
+            });
+            
+            // Handle dropped files
+            inputContainer.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                this.handleFileSelection(files);
+            }, false);
+        }
+    }
+    
+    /**
+     * Prevent default drag behaviors
+     */
+    preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    /**
+     * Highlight drop area
+     */
+    highlight(element) {
+        element.classList.add('drag-over');
+    }
+    
+    /**
+     * Remove highlight from drop area
+     */
+    unhighlight(element) {
+        element.classList.remove('drag-over');
+    }
+    
+    /**
+     * Handle file selection from input or drag and drop
+     */
+    handleFileSelection(files) {
+        Array.from(files).forEach(file => {
+            if (this.validateFile(file)) {
+                this.processFile(file);
+            }
+        });
+        
+        // Clear the file input
+        if (this.fileInput) {
+            this.fileInput.value = '';
+        }
+    }
+    
+    /**
+     * Validate file type and size
+     */
+    validateFile(file) {
+        // Check file size
+        if (file.size > this.maxFileSize) {
+            this.showNotification(`File "${file.name}" is too large. Maximum size is 1MB.`, 'error');
+            return false;
+        }
+        
+        // Check file type
+        const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+        if (!this.allowedExtensions.includes(fileExtension)) {
+            this.showNotification(`File type "${fileExtension}" is not supported. Allowed types: ${this.allowedExtensions.join(', ')}`, 'error');
+            return false;
+        }
+        
+        // Check if file already exists
+        if (this.uploadedFiles.some(f => f.name === file.name && f.size === file.size)) {
+            this.showNotification(`File "${file.name}" is already uploaded.`, 'warning');
+            return false;
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Process and extract content from file
+     */
+    async processFile(file) {
+        try {
+            let content = '';
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (fileExtension === '.pdf') {
+                content = await this.extractPDFContent(file);
+            } else {
+                // For text files (txt, json, md, csv)
+                content = await this.readTextFile(file);
+            }
+            
+            const fileData = {
+                name: file.name,
+                size: file.size,
+                type: fileExtension,
+                content: content,
+                id: Date.now() + Math.random() // Simple unique ID
+            };
+            
+            this.uploadedFiles.push(fileData);
+            this.displayFileChip(fileData);
+            this.showNotification(`File "${file.name}" uploaded successfully.`, 'success');
+            
+        } catch (error) {
+            console.error('Error processing file:', error);
+            this.showNotification(`Error processing file "${file.name}": ${error.message}`, 'error');
+        }
+    }
+    
+    /**
+     * Read text content from file
+     */
+    readTextFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+                    
+                    // Format JSON files for better readability
+                    if (fileExtension === '.json') {
+                        try {
+                            const jsonObj = JSON.parse(content);
+                            resolve(JSON.stringify(jsonObj, null, 2)); // Pretty print JSON
+                        } catch (jsonError) {
+                            // If JSON parsing fails, return as plain text
+                            console.warn('Failed to parse JSON, returning as plain text:', jsonError);
+                            resolve(content);
+                        }
+                    } else {
+                        // Return other text files as-is
+                        resolve(content);
+                    }
+                } catch (error) {
+                    reject(new Error(`Failed to process file: ${error.message}`));
+                }
+            };
+            reader.onerror = (e) => reject(new Error('Failed to read file'));
+            reader.readAsText(file);
+        });
+    }
+    
+    /**
+     * Extract content from PDF file using PDF.js
+     */
+    async extractPDFContent(file) {
+        return new Promise((resolve, reject) => {
+            try {
+                // Ensure PDF.js is available
+                if (!window.pdfjsLib) {
+                    console.error('PDF.js library not loaded');
+                    reject(new Error('PDF.js library not loaded. Please refresh the page and try again.'));
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const typedArray = new Uint8Array(event.target.result);
+                    
+                    // Initialize PDF.js with proper error handling
+                    const loadingTask = pdfjsLib.getDocument({ data: typedArray });
+                    
+                    try {
+                        const pdf = await loadingTask.promise;
+                        let fullText = `[PDF File: ${file.name}]\n\n`;
+                        
+                        // Extract text from each page (with page limit for very large PDFs)
+                        const maxPages = Math.min(pdf.numPages, 50); // Limit to 50 pages for performance
+                        
+                        if (pdf.numPages > 50) {
+                            fullText += `[Note: This PDF has ${pdf.numPages} pages. Only the first 50 pages are shown.]\n\n`;
+                        }
+                        
+                        // Set a timeout for the entire PDF processing
+                        const pdfProcessingTimeout = setTimeout(() => {
+                            reject(new Error('PDF processing took too long. Try with a smaller PDF file.'));
+                        }, 30000); // 30 second timeout
+                        
+                        try {
+                            for (let i = 1; i <= maxPages; i++) {
+                                const page = await pdf.getPage(i);
+                                const textContent = await page.getTextContent();
+                                const pageText = textContent.items.map(item => item.str).join(' ');
+                                fullText += `--- Page ${i} ---\n${pageText}\n\n`;
+                            }
+                            
+                            clearTimeout(pdfProcessingTimeout);
+                            resolve(fullText);
+                        } catch (pageError) {
+                            clearTimeout(pdfProcessingTimeout);
+                            console.error('Error extracting page content:', pageError);
+                            // If we've extracted some content, return what we have with an error note
+                            if (fullText.length > 0) {
+                                fullText += `\n[Error: Could not extract all content. ${pageError.message}]`;
+                                resolve(fullText);
+                            } else {
+                                reject(new Error(`Failed to extract PDF content: ${pageError.message}`));
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error parsing PDF:', error);
+                        reject(new Error(`Failed to parse PDF: ${error.message}`));
+                    }
+                };
+                
+                reader.onerror = (error) => {
+                    reject(new Error('Failed to read PDF file'));
+                };
+                
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                console.error('Error in PDF extraction:', error);
+                reject(new Error(`PDF extraction failed: ${error.message}`));
+            }
+        });
+    }
+    
+    /**
+     * Display file chip in the UI
+     */
+    displayFileChip(fileData) {
+        if (!this.fileChipsContainer) return;
+        
+        const chip = document.createElement('div');
+        chip.className = 'file-chip';
+        chip.dataset.fileId = fileData.id;
+        
+        const icon = this.getFileIcon(fileData.type);
+        const sizeText = this.formatFileSize(fileData.size);
+        
+        chip.innerHTML = `
+            <i class="file-chip-icon ${icon}"></i>
+            <span class="file-chip-name">${fileData.name}</span>
+            <span class="file-chip-size">${sizeText}</span>
+            <button class="file-chip-remove" onclick="playground.removeFile('${fileData.id}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        this.fileChipsContainer.appendChild(chip);
+        this.fileChipsContainer.style.display = 'flex';
+        
+        // Show the Send Files button when files are uploaded
+        if (this.sendFilesBtn) {
+            this.sendFilesBtn.style.display = 'inline-flex';
+        }
+    }
+    
+    /**
+     * Get appropriate icon for file type
+     */
+    getFileIcon(fileType) {
+        const iconMap = {
+            '.txt': 'fas fa-file-alt',
+            '.md': 'fas fa-file-alt',
+            '.csv': 'fas fa-file-csv',
+            '.json': 'fas fa-file-code',
+            '.pdf': 'fas fa-file-pdf'
+        };
+        return iconMap[fileType] || 'fas fa-file';
+    }
+    
+    /**
+     * Format file size for display
+     */
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    /**
+     * Remove file from uploaded files
+     */
+    removeFile(fileId) {
+        // Remove from uploaded files array
+        this.uploadedFiles = this.uploadedFiles.filter(f => f.id != fileId);
+        
+        // Remove chip from UI
+        const chip = this.fileChipsContainer.querySelector(`[data-file-id="${fileId}"]`);
+        if (chip) {
+            chip.remove();
+        }
+        
+        // Hide container and Send Files button if no files
+        if (this.uploadedFiles.length === 0) {
+            this.fileChipsContainer.style.display = 'none';
+            
+            // Hide the Send Files button
+            if (this.sendFilesBtn) {
+                this.sendFilesBtn.style.display = 'none';
+            }
+        }
+        
+        this.showNotification('File removed successfully.', 'info');
+    }
+    
+    /**
+     * Get all uploaded file contents for sending with message
+     */
+    getUploadedFilesContent() {
+        if (this.uploadedFiles.length === 0) return '';
+        
+        let content = '\n\n--- Uploaded Files ---\n';
+        this.uploadedFiles.forEach((file, index) => {
+            // Add a unique identifier for each file that can be used for citations
+            file.id = `file-${index + 1}`;
+            content += `\n**File: ${file.name}** [${file.id}]\n`;
+            content += file.content + '\n';
+        });
+        
+        return content;
+    }
+    
+    /**
+     * Clear all uploaded files after sending message
+     */
+    clearUploadedFiles() {
+        this.uploadedFiles = [];
+        
+        // Clear all chips from UI
+        if (this.fileChipsContainer) {
+            this.fileChipsContainer.innerHTML = '';
+            this.fileChipsContainer.style.display = 'none';
+        }
+        
+        // Hide the Send Files button
+        if (this.sendFilesBtn) {
+            this.sendFilesBtn.style.display = 'none';
+        }
+    }
+    
     toggleVoiceInput(isFixed = false) {
+        this.fromVoice = true;
         this.currentVoiceInputFixed = isFixed;
         
         if (!this.recognition) {
@@ -609,9 +1047,18 @@ class LLMPlayground {
         if (this.isRecording) {
             // Stop recording
             try {
+                // Clear any pending speech detection timeout
+                if (this.speechDetectionTimeout) {
+                    clearTimeout(this.speechDetectionTimeout);
+                    this.speechDetectionTimeout = null;
+                }
+                
                 this.recognition.stop();
                 console.log('Stopping voice input');
                 this.showNotification('Voice input stopped', 'info');
+                
+                // Reset voice announcement flag when stopping
+                this.voiceInputAnnounced = false;
             } catch (error) {
                 console.error('Error stopping speech recognition:', error);
             }
@@ -629,18 +1076,49 @@ class LLMPlayground {
                     .then(stream => {
                         console.log('Microphone permission granted');
                         
-                        // Stop the stream immediately as we just needed permission for Web Speech API
-                        stream.getTracks().forEach(track => track.stop());
+                        // Test microphone audio levels before starting recognition
+                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        const analyser = audioContext.createAnalyser();
+                        const microphone = audioContext.createMediaStreamSource(stream);
+                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
                         
-                        // Now start speech recognition
-                        try {
-                            this.recognition.start();
-                            console.log('Starting voice input with Web Speech API');
-                            this.showNotification('Listening with Web Speech API... Speak clearly into your microphone. End with "send" to submit', 'info');
-                        } catch (error) {
-                            console.error('Error starting speech recognition after permission:', error);
-                            this.showNotification('Error starting voice input. Please try again.', 'error');
-                        }
+                        microphone.connect(analyser);
+                        analyser.fftSize = 256;
+                        
+                        // Test for 2 seconds to see if microphone is picking up audio
+                        let testDuration = 0;
+                        let audioDetected = false;
+                        
+                        const testInterval = setInterval(() => {
+                            analyser.getByteFrequencyData(dataArray);
+                            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+                            
+                            if (average > 10) { // Threshold for audio detection
+                                audioDetected = true;
+                                clearInterval(testInterval);
+                                audioContext.close();
+                                this.startSpeechRecognition(stream);
+                                return;
+                            }
+                            
+                            testDuration += 100;
+                            if (testDuration >= 2000) { // Test for 2 seconds
+                                clearInterval(testInterval);
+                                audioContext.close();
+                                if (!audioDetected) {
+                                    this.showNotification('Microphone test: Low audio levels detected. Please speak louder or check microphone settings.', 'warning');
+                                }
+                                this.startSpeechRecognition(stream);
+                            }
+                        }, 100);
+                        
+                        // Stop the stream after testing
+                        setTimeout(() => {
+                            stream.getTracks().forEach(track => track.stop());
+                        }, 2100);
+                        
+                        // Now start speech recognition using the dedicated method
+                        this.startSpeechRecognition();
                     })
                     .catch(err => {
                         console.error('Microphone permission denied:', err);
@@ -653,8 +1131,58 @@ class LLMPlayground {
         }
     }
     
-    // Speech recognition is now handled by Web Speech API only
-        
+    /**
+     * Start speech recognition after microphone testing
+     * @param {MediaStream} stream - The media stream from getUserMedia (optional)
+     */
+    startSpeechRecognition(stream = null) {
+        try {
+            // Cancel any ongoing speech synthesis before starting recognition
+            if (this.speechSynthesis) {
+                this.speechSynthesis.cancel();
+            }
+            
+            // Reset the input field before starting new recognition
+            const messageInput = this.currentVoiceInputFixed ? this.fixedMessageInput : this.messageInput;
+            messageInput.value = '';
+            
+            this.recognition.start();
+            console.log('Starting voice input with Web Speech API');
+            this.showNotification('Listening with Web Speech API... Speak clearly into your microphone. End with "send" to submit', 'info');
+            
+            // Voice input is enabled - no voice announcement as per user request
+            this.voiceInputAnnounced = true;
+            
+            // Set a longer timeout to check if speech is detected
+            this.speechDetectionTimeout = setTimeout(() => {
+                // If we're still recording but no speech has been detected
+                const messageInput = this.currentVoiceInputFixed ? this.fixedMessageInput : this.messageInput;
+                if (this.isRecording && messageInput.value === '') {
+                    this.showNotification('No speech detected yet. Please speak louder or check your microphone.', 'warning');
+                    // Try to restart recognition automatically
+                    try {
+                        this.recognition.stop();
+                        setTimeout(() => {
+                            if (!this.isRecording) {
+                                this.toggleVoiceInput(this.currentVoiceInputFixed);
+                            }
+                        }, 1000);
+                    } catch (error) {
+                        console.error('Error restarting recognition:', error);
+                    }
+                }
+            }, 8000); // Check after 8 seconds instead of 5
+        } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            this.showNotification('Error starting voice input. Please try again.', 'error');
+        }
+    }
+    
+    /**
+     * Initialize speech recognition with Gemini model
+     * @param {MediaStream} stream - The media stream from getUserMedia
+     */
+    initializeGeminiSpeechRecognition(stream) {
         // Set up audio recording
         this.mediaRecorder = new MediaRecorder(stream);
         this.audioChunks = [];
@@ -825,11 +1353,17 @@ class LLMPlayground {
         if (this.voiceOutputBtn) {
             this.voiceOutputBtn.classList.toggle('active', this.voiceOutputEnabled);
             this.voiceOutputBtn.title = this.voiceOutputEnabled ? 'Disable voice output' : 'Enable voice output';
+            if (this.voiceOutputBtn.innerHTML) {
+                this.voiceOutputBtn.innerHTML = `<i class="fas fa-volume-${this.voiceOutputEnabled ? 'up' : 'mute'}"></i>`;
+            }
         }
         
         if (this.fixedVoiceOutputBtn) {
             this.fixedVoiceOutputBtn.classList.toggle('active', this.voiceOutputEnabled);
             this.fixedVoiceOutputBtn.title = this.voiceOutputEnabled ? 'Disable voice output' : 'Enable voice output';
+            if (this.fixedVoiceOutputBtn.innerHTML) {
+                this.fixedVoiceOutputBtn.innerHTML = `<i class="fas fa-volume-${this.voiceOutputEnabled ? 'up' : 'mute'}"></i>`;
+            }
         }
         
         // Gemini toggle buttons have been removed
@@ -840,7 +1374,7 @@ class LLMPlayground {
     // Gemini speech functionality has been removed
     
     speakText(text) {
-        if (!this.voiceOutputEnabled) return;
+        if (!this.voiceOutputEnabled || !text) return;
         
         // Prepare text for speech
         const cleanText = this.prepareTextForSpeech(text);
@@ -858,96 +1392,56 @@ class LLMPlayground {
         if (!this.speechSynthesis) {
             this.speechSynthesis = window.speechSynthesis;
         }
-            
-            // Create utterance
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            
-            // Select a voice (preferably a female voice)
-            const voices = this.speechSynthesis.getVoices();
-            if (voices.length > 0) {
-                // Try to find a female English voice
-                const femaleVoice = voices.find(voice => 
-                    voice.name.includes('female') && voice.lang.startsWith('en'));
-                
-                // If no specific female voice, try any English voice
-                const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
-                
-                // Set the voice, with fallbacks
-                utterance.voice = femaleVoice || englishVoice || voices[0];
-            }
-            
-            // Set other properties
-            utterance.rate = 1.0; // Normal speed
-            utterance.pitch = 1.0; // Normal pitch
-            utterance.volume = 1.0; // Full volume
-            
-            // Handle speech end
-            utterance.onend = () => {
-                if (this.voiceOutputBtn) {
-                    this.voiceOutputBtn.classList.remove('speaking');
-                }
-                if (this.fixedVoiceOutputBtn) {
-                    this.fixedVoiceOutputBtn.classList.remove('speaking');
-                }
-            };
-            
-            // Speak the text
-            this.speechSynthesis.speak(utterance);
-        }
-    }
-    
-    // Web Speech API is now used for all speech synthesis
-            
-            // Create utterance
-            const utterance = new SpeechSynthesisUtterance(text);
-            
-            // Select a voice (preferably a female voice)
-            const voices = this.speechSynthesis.getVoices();
-            if (voices.length > 0) {
-                // Try to find a female English voice
-                const femaleVoice = voices.find(voice => 
-                    voice.name.includes('female') && voice.lang.startsWith('en'));
-                
-                // If no specific female voice, try any English voice
-                const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
-                
-                // Set the voice, with fallbacks
-                utterance.voice = femaleVoice || englishVoice || voices[0];
-            }
-            
-            // Set properties
-            utterance.rate = 1.0;  // Normal speed
-            utterance.pitch = 1.0; // Normal pitch
-            utterance.volume = 1.0; // Full volume
-            
-            // Handle speech end
-            utterance.onend = () => {
-                if (this.voiceOutputBtn) {
-                    this.voiceOutputBtn.classList.remove('speaking');
-                }
-                if (this.fixedVoiceOutputBtn) {
-                    this.fixedVoiceOutputBtn.classList.remove('speaking');
-                }
-            };
-            
-            // Speak the text
-            this.speechSynthesis.speak(utterance);
-        });
         
-        // Handle speech error for Web Speech API
-        if (!this.useGeminiForSpeech) {
-            utterance.onerror = (event) => {
-                console.error('Speech synthesis error:', event);
-                if (this.voiceOutputBtn) {
-                    this.voiceOutputBtn.classList.remove('speaking');
-                }
-                if (this.fixedVoiceOutputBtn) {
-                    this.fixedVoiceOutputBtn.classList.remove('speaking');
-                }
-            };
+        // Cancel any ongoing speech before starting a new one
+        this.speechSynthesis.cancel();
+        
+        // Create utterance
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        
+        // Select a voice (preferably a female voice)
+        const voices = this.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            // Try to find a female English voice
+            const femaleVoice = voices.find(voice => 
+                voice.name.includes('female') && voice.lang.startsWith('en'));
+            
+            // If no specific female voice, try any English voice
+            const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+            
+            // Set the voice, with fallbacks
+            utterance.voice = femaleVoice || englishVoice || voices[0];
         }
+        
+        // Set other properties
+        utterance.rate = 1.0; // Normal speed
+        utterance.pitch = 1.0; // Normal pitch
+        utterance.volume = 1.0; // Full volume
+        
+        // Handle speech end
+        utterance.onend = () => {
+            if (this.voiceOutputBtn) {
+                this.voiceOutputBtn.classList.remove('speaking');
+            }
+            if (this.fixedVoiceOutputBtn) {
+                this.fixedVoiceOutputBtn.classList.remove('speaking');
+            }
+        };
+        
+        // Speak the text only once
+        this.speechSynthesis.speak(utterance);
     }
     
+    /**
+     * Prepare text for speech synthesis by removing code blocks, URLs, and formatting
+     * @param {string} text - The text to prepare
+     * @returns {string} - The processed text ready for speech synthesis
+     */
+    /**
+     * Prepare text for speech synthesis by removing code blocks, URLs, and formatting
+     * @param {string} text - The text to prepare
+     * @returns {string} - The processed text ready for speech synthesis
+     */
     prepareTextForSpeech(text) {
         if (!text) return '';
         
@@ -964,41 +1458,85 @@ class LLMPlayground {
             .replace(/\s+/g, ' ') // Replace multiple spaces with single space
             .trim();
         
+        // Limit length to prevent very long speeches
+        const maxLength = 500;
+        if (cleanText.length > maxLength) {
+            cleanText = cleanText.substring(0, maxLength) + '... The rest of the message is omitted for brevity.';
+        }
+        
         return cleanText;
     }
     
-    showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        
-        document.body.appendChild(notification);
-        
-        // Fade in
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 10);
-        
-        // Fade out and remove
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
-        }, 3000);
-    }
-    
-    async sendMessage(isFixed = false) {
+    /**
+      * Show a temporary notification message
+      * @param {string} message - The message to display
+      * @param {string} type - The type of notification (info, error, etc.)
+      */
+     showNotification(message, type = 'info') {
+         const notification = document.createElement('div');
+         notification.className = `notification ${type}`;
+         notification.textContent = message;
+         
+         document.body.appendChild(notification);
+         
+         // Fade in
+         setTimeout(() => {
+             notification.classList.add('show');
+         }, 10);
+         
+         // Fade out and remove
+         setTimeout(() => {
+             notification.classList.remove('show');
+             setTimeout(() => {
+                 notification.remove();
+             }, 300);
+         }, 3000);
+     }
+     
+     /**
+      * Send a message to the AI
+      * @param {boolean} isFixed - Whether to use the fixed message input
+      * @param {boolean} filesOnly - Whether to send only files without a message
+      */
+    async sendMessage(isFixed = false, filesOnly = false) {
         const messageInput = isFixed ? this.fixedMessageInput : this.messageInput;
-        const messageText = messageInput.value.trim();
-        if (!messageText) return;
+        const messageText = filesOnly ? '' : messageInput.value.trim();
         
-        // Add user message
-        this.addMessage('user', messageText);
+        // Get uploaded file content
+        const fileContent = this.getUploadedFilesContent();
+        
+        // Only return if both message text and file content are empty
+        if (!messageText && !fileContent) return;
+        
+        // Store the uploaded files for citation reference before clearing
+        const currentUploadedFiles = [...this.uploadedFiles];
+        
+        const fullMessage = messageText + fileContent;
+        
+        // Add user message (display typed text or a file upload message)
+        if (messageText) {
+            this.addMessage('user', messageText);
+        } else if (fileContent) {
+            this.addMessage('user', '[File content uploaded]');
+        }
         
         // Clear input
         messageInput.value = '';
         this.updateSendButton(isFixed);
+        
+        // Transfer uploaded files to backend client if available
+        if (window.backendClient && currentUploadedFiles.length > 0) {
+            // First clear any existing files in the backend client
+            window.backendClient.clearUploadedFiles();
+            
+            // Add each file to the backend client
+            currentUploadedFiles.forEach(file => {
+                window.backendClient.addUploadedFile(file);
+            });
+        }
+        
+        // Clear uploaded files from UI after sending
+        this.clearUploadedFiles();
         
         // Show typing indicator
         this.showTypingIndicator();
@@ -1007,8 +1545,15 @@ class LLMPlayground {
             // Use the backend API client if available, otherwise fallback to local generation
             if (window.backendClient) {
                 console.log('Using backend client for chat completion');
+                
+                // Add instructions for the model to use citations
+                let promptWithInstructions = messageText; // Only send the message text, not the file content
+                if (currentUploadedFiles.length > 0) {
+                    promptWithInstructions = `When answering the following question, you MUST use the content from the uploaded files to provide your answer. Base your response primarily on the information in these files. Please cite your sources using the file identifiers in square brackets (e.g., [file-1]). If you're using information from multiple files, include all relevant citations.\n\n${messageText}`;
+                }
+                
                 const response = await window.backendClient.chatCompletion({
-                    prompt: messageText,
+                    prompt: promptWithInstructions,
                     model: this.currentConfig.model,
                     provider: document.getElementById('providerSelect').value,
                     parameters: {
@@ -1024,7 +1569,12 @@ class LLMPlayground {
                 
                 console.log('Received response from backend:', response);
                 this.hideTypingIndicator();
+                
+                // Temporarily restore the uploaded files for citation formatting
+                this.uploadedFiles = currentUploadedFiles;
                 this.addMessage('assistant', response.content);
+                // Clear the uploaded files again after adding the message
+                this.uploadedFiles = [];
             } else {
                 console.log('Backend client not available, using local generation');
                 // Fallback to local generation if backend is not available
@@ -1077,6 +1627,10 @@ class LLMPlayground {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${role}`;
         
+        // Generate a unique ID for this message
+        const messageId = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+        messageDiv.setAttribute('data-message-id', messageId);
+        
         // Create avatar
         const avatarDiv = document.createElement('div');
         avatarDiv.className = 'message-avatar';
@@ -1092,7 +1646,13 @@ class LLMPlayground {
         // Create content
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        contentDiv.textContent = content;
+        
+        if (role === 'assistant') {
+            // Process content for citations if it's from the assistant
+            contentDiv.innerHTML = this.formatMessageWithCitations(content);
+        } else {
+            contentDiv.textContent = content;
+        }
         
         // Append in correct order based on role
         if (role === 'user') {
@@ -1101,9 +1661,75 @@ class LLMPlayground {
         } else {
             messageDiv.appendChild(avatarDiv);
             messageDiv.appendChild(contentDiv);
+            
+            // Add feedback buttons for AI responses
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'message-feedback';
+            
+            const thumbsUpBtn = document.createElement('button');
+            thumbsUpBtn.className = 'feedback-btn thumbs-up';
+            thumbsUpBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
+            thumbsUpBtn.title = 'Helpful response';
+            thumbsUpBtn.addEventListener('click', () => this.saveFeedback(messageId, 'positive'));
+            
+            const thumbsDownBtn = document.createElement('button');
+            thumbsDownBtn.className = 'feedback-btn thumbs-down';
+            thumbsDownBtn.innerHTML = '<i class="fas fa-thumbs-down"></i>';
+            thumbsDownBtn.title = 'Not helpful response';
+            thumbsDownBtn.addEventListener('click', () => this.saveFeedback(messageId, 'negative'));
+            
+            feedbackDiv.appendChild(thumbsUpBtn);
+            feedbackDiv.appendChild(thumbsDownBtn);
+            messageDiv.appendChild(feedbackDiv);
         }
         
         return messageDiv;
+    }
+    
+    /**
+     * Format message content with citations
+     * @param {string} content - The message content
+     * @returns {string} - Formatted HTML with citations
+     */
+    formatMessageWithCitations(content) {
+        // Check if we have any uploaded files to reference
+        if (!this.uploadedFiles || this.uploadedFiles.length === 0) {
+            return this.escapeHTML(content);
+        }
+        
+        // Create a map of file IDs to file names for quick lookup
+        const fileMap = {};
+        this.uploadedFiles.forEach(file => {
+            if (file.id) {
+                fileMap[file.id] = file.name;
+            }
+        });
+        
+        // Replace citation patterns like [file-1] with linked citations
+        let formattedContent = this.escapeHTML(content);
+        
+        // Replace citation patterns
+        const citationRegex = /\[(file-\d+)\]/g;
+        formattedContent = formattedContent.replace(citationRegex, (match, fileId) => {
+            const fileName = fileMap[fileId] || 'Unknown file';
+            return `<span class="citation" title="${fileName}">[${fileName}]</span>`;
+        });
+        
+        // Convert line breaks to <br> tags
+        formattedContent = formattedContent.replace(/\n/g, '<br>');
+        
+        return formattedContent;
+    }
+    
+    /**
+     * Escape HTML special characters to prevent XSS
+     * @param {string} text - The text to escape
+     * @returns {string} - Escaped HTML
+     */
+    escapeHTML(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
     
     showTypingIndicator() {
@@ -1833,6 +2459,16 @@ function toggleMobileMenu() {
     const sidebar = document.querySelector('.sidebar');
     sidebar.classList.toggle('open');
 }
+
+// Global function to handle file input click
+window.openFileInput = function() {
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) {
+        console.log('openFileInput called');
+        fileInput.click();
+    }
+    return false;
+};
 
 // Add mobile menu button for smaller screens
 if (window.innerWidth <= 768) {

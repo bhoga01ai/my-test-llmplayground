@@ -1,9 +1,11 @@
 const express = require('express');
 const { asyncHandler } = require('../middleware/errorHandler');
 const { validateRequest, validateModelCompatibility } = require('../middleware/validation');
+const { moderateUserInput } = require('../middleware/contentModeration');
 const { getProviderConfig } = require('../config/environment');
 const { createModelService } = require('../services/modelService');
 const { logger } = require('../utils/logger');
+const { getGuardrailService } = require('../services/guardrailService');
 
 const router = express.Router();
 
@@ -72,7 +74,7 @@ router.get('/:provider', asyncHandler(async (req, res) => {
  * POST /api/models/chat
  * Main endpoint for chat completions
  */
-router.post('/chat', validateRequest, validateModelCompatibility, asyncHandler(async (req, res) => {
+router.post('/chat', validateRequest, moderateUserInput, validateModelCompatibility, asyncHandler(async (req, res) => {
   const startTime = Date.now();
   const { prompt, model, provider, parameters } = req.validatedData;
   
@@ -87,6 +89,28 @@ router.post('/chat', validateRequest, validateModelCompatibility, asyncHandler(a
   }
   
   try {
+    // Initialize guardrail service
+    const guardrailService = getGuardrailService();
+    
+    // Moderate user input if guardrails are enabled
+    if (guardrailService.isEnabled()) {
+      const inputModeration = await guardrailService.moderateInput(prompt);
+      
+      if (inputModeration.isSafe === false) {
+        const safeResponse = guardrailService.handleUnsafeContent(inputModeration, prompt);
+        
+        return res.status(400).json({
+          success: false,
+          error: 'Content Policy Violation',
+          message: safeResponse,
+          moderation: {
+            isSafe: false,
+            attackType: inputModeration.attackType
+          }
+        });
+      }
+    }
+    
     // Create model service instance
     const modelService = createModelService(provider, config);
     
@@ -95,15 +119,39 @@ router.post('/chat', validateRequest, validateModelCompatibility, asyncHandler(a
       model,
       promptLength: prompt.length,
       parameters,
-      ip: req.ip
+      ip: req.ip,
+      guardrailsEnabled: guardrailService.isEnabled()
     });
     
     // Make API call
     const response = await modelService.generateCompletion({
       prompt,
       model,
-      parameters
+      parameters,
+      conversation_history: req.body.conversation_history || []
     });
+    
+    // Moderate model response if guardrails are enabled
+    let finalContent = response.content;
+    let moderationResult = { isSafe: true };
+    
+    if (guardrailService.isEnabled()) {
+      moderationResult = await guardrailService.moderateResponse(response.content);
+      
+      // Add moderation info to the response
+      response.moderated = moderationResult.isSafe === false;
+      response.moderationResult = moderationResult;
+      
+      if (!moderationResult.isSafe) {
+        finalContent = guardrailService.handleUnsafeContent(moderationResult, response.content);
+        response.original_content = response.content;
+        
+        logger.warn('Response moderation applied', {
+          categories: moderationResult.flaggedCategories || [],
+          responseLength: response.content.length
+        });
+      }
+    }
     
     const duration = Date.now() - startTime;
     
@@ -112,7 +160,8 @@ router.post('/chat', validateRequest, validateModelCompatibility, asyncHandler(a
       model,
       duration,
       responseLength: response.content?.length || 0,
-      tokensUsed: response.usage || 'unknown'
+      tokensUsed: response.usage || 'unknown',
+      responseSafe: moderationResult.isSafe
     });
     
     // Return standardized response
@@ -121,9 +170,10 @@ router.post('/chat', validateRequest, validateModelCompatibility, asyncHandler(a
       provider,
       model,
       response: {
-        content: response.content,
+        content: finalContent,
         usage: response.usage,
-        metadata: response.metadata
+        metadata: response.metadata,
+        moderated: !moderationResult.isSafe
       },
       duration,
       timestamp: new Date().toISOString()
@@ -149,7 +199,7 @@ router.post('/chat', validateRequest, validateModelCompatibility, asyncHandler(a
  * POST /api/models/stream
  * Streaming endpoint for chat completions
  */
-router.post('/stream', validateRequest, validateModelCompatibility, asyncHandler(async (req, res) => {
+router.post('/stream', validateRequest, moderateUserInput, validateModelCompatibility, asyncHandler(async (req, res) => {
   const { prompt, model, provider, parameters } = req.validatedData;
   
   // Check if provider is available
@@ -163,6 +213,38 @@ router.post('/stream', validateRequest, validateModelCompatibility, asyncHandler
   }
   
   try {
+    // Initialize guardrail service
+    const guardrailService = getGuardrailService();
+    
+    // Moderate user input if guardrails are enabled
+    if (guardrailService.isEnabled()) {
+      const inputModeration = await guardrailService.moderateInput(prompt);
+      
+      if (!inputModeration.isSafe) {
+        // For streaming, we need to send the error in SSE format
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        
+        const safeResponse = guardrailService.handleUnsafeContent(inputModeration, prompt);
+        
+        const errorChunk = {
+          error: 'Content Policy Violation',
+          message: safeResponse,
+          moderation: {
+            isSafe: false,
+            attackType: inputModeration.attackType
+          }
+        };
+        
+        res.write(`data: ${JSON.stringify(errorChunk)}\n\n`);
+        res.write('data: [DONE]\n\n');
+        res.end();
+        return;
+      }
+    }
+    
     // Set headers for streaming
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -176,8 +258,12 @@ router.post('/stream', validateRequest, validateModelCompatibility, asyncHandler
       provider,
       model,
       promptLength: prompt.length,
-      ip: req.ip
+      ip: req.ip,
+      guardrailsEnabled: guardrailService.isEnabled()
     });
+    
+    // For streaming, we can only moderate the input, not the output
+    // as we don't have the full response until the stream is complete
     
     // Start streaming
     await modelService.generateStreamingCompletion({

@@ -60,15 +60,35 @@ class OpenAIService extends BaseModelService {
     this.baseURL = config.baseUrl;
   }
   
-  async generateCompletion({ prompt, model, parameters }) {
+  async generateCompletion({ prompt, model, parameters, conversation_history = [] }) {
     const params = this.mergeParameters(parameters);
     
     try {
+      // Format messages for the API
+      let messages = [];
+      
+      // Add conversation history if provided
+      if (conversation_history && conversation_history.length > 0) {
+        messages = [...conversation_history];
+        
+        // If the last message is from the user and matches our prompt, don't duplicate it
+        const lastMessage = conversation_history[conversation_history.length - 1];
+        if (lastMessage && lastMessage.role === 'user' && lastMessage.content === prompt) {
+          // Don't add the prompt again
+        } else {
+          // Add the current prompt as a new user message
+          messages.push({ role: 'user', content: prompt });
+        }
+      } else {
+        // No history, just add the current prompt
+        messages = [{ role: 'user', content: prompt }];
+      }
+      
       const response = await axios.post(
         `${this.baseURL}/chat/completions`,
         {
           model,
-          messages: [{ role: 'user', content: prompt }],
+          messages: messages,
           temperature: params.temperature,
           max_tokens: params.max_tokens,
           top_p: params.top_p,

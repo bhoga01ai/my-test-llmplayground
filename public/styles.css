@@ -589,6 +589,24 @@ body {
     gap: 16px;
 }
 
+/* Citation Styles */
+.citation {
+    display: inline-block;
+    background-color: #f0f7ff;
+    color: #0066cc;
+    border-radius: 4px;
+    padding: 0 6px;
+    margin: 0 2px;
+    font-size: 0.85em;
+    font-weight: 500;
+    cursor: help;
+    border: 1px solid #cce5ff;
+    max-width: 300px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .message.user {
     justify-content: flex-end;
 }
@@ -623,6 +641,117 @@ body {
     background: transparent;
 }
 
+/* File Upload Styles */
+.file-chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+}
+
+.file-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #f0f8ff;
+    border: 1px solid #007aff;
+    border-radius: 20px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #007aff;
+    max-width: 200px;
+    transition: all 0.2s ease;
+}
+
+.file-chip:hover {
+    background-color: #e6f3ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+}
+
+.file-chip-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.file-chip-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.file-chip-size {
+    font-size: 12px;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.file-chip-remove {
+    background: none;
+    border: none;
+    color: #007aff;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.file-chip-remove:hover {
+    background-color: #007aff;
+    color: white;
+}
+
+.file-drop-zone {
+    border: 2px dashed #007aff;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #007aff;
+    background-color: #f8fbff;
+    margin-bottom: 12px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.file-drop-zone.drag-over {
+    background-color: #e6f3ff;
+    border-color: #0056cc;
+    transform: scale(1.02);
+}
+
+.file-drop-zone:hover {
+    background-color: #e6f3ff;
+    border-color: #0056cc;
+}
+
+.file-drop-zone i {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.file-drop-zone p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.file-drop-zone small {
+    display: block;
+    margin-top: 4px;
+    opacity: 0.7;
+    font-size: 12px;
+}
+
 .input-wrapper {
     display: flex;
     align-items: center;
@@ -643,17 +772,36 @@ body {
 }
 
 .attach-btn {
-    background: none;
-    border: none;
-    color: #666;
+    background: #ffffff; /* White background */
+    border: 2px solid #2d2d2d; /* Dark border */
+    color: #2d2d2d; /* Dark text for the icon */
     cursor: pointer;
-    padding: 12px;
-    border-radius: 8px;
-    transition: color 0.2s;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    width: 40px;
+    height: 40px;
+    margin-right: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    position: relative;
+    z-index: 1000;
 }
 
 .attach-btn:hover {
-    color: #333;
+    background: #f0f0f0; /* Light gray on hover */
+    transform: scale(1.1);
+    border-color: #007aff; /* Blue border on hover */
+    color: #007aff; /* Blue icon on hover */
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
 }
 
 .voice-input-btn {
@@ -737,7 +885,7 @@ body {
 .config-panel {
     position: fixed;
     top: 0;
-    right: 0;
+    right: -350px;
     width: 350px;
     height: 100vh;
     background-color: #ffffff;
@@ -745,6 +893,7 @@ body {
     box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     overflow-y: auto;
+    transition: right 0.3s ease-in-out;
     display: block;
 }
 

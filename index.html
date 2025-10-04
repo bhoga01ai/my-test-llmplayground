@@ -3,9 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>my-test-llmplayground</title>
+    <title>LLM Playground</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="public/css/feedback.css">
+    <!-- PDF.js library for PDF processing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script>
+        // Set worker source for PDF.js
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+        }
+    </script>
 </head>
 <body>
     <div class="app-container">
@@ -86,10 +95,21 @@
                         
                         <!-- Input Container -->
                          <div class="input-container">
-                             <div class="input-wrapper">
-                                 <button class="attach-btn">
-                                     <i class="fas fa-paperclip"></i>
+                             <!-- Hidden File Input -->
+                             <input type="file" id="fileInput" accept=".txt,.pdf,.json,.md,.csv" multiple style="display: none;">
+                             
+                             <!-- File Chips Container (outside input wrapper) -->
+                             <div id="fileChipsContainer" class="file-chips-container">
+                                 <!-- Send files button will appear here when files are uploaded -->
+                                 <button id="sendFilesBtn" class="send-files-btn" style="display: none;">
+                                     <i class="fas fa-paper-plane"></i> Send Files
                                  </button>
+                             </div>
+                             
+                             <div class="input-wrapper">
+                                 <a href="#" class="attach-btn" id="attachBtn" onclick="window.openFileInput(); return false;">
+                                     <i class="fas fa-plus"></i>
+                                 </a>
                                  <button class="voice-input-btn" id="voiceInputBtn" title="Voice Input">
                                      <i class="fas fa-microphone"></i>
                                  </button>
@@ -142,11 +162,14 @@
                 
                 <!-- Fixed Input Container (shown when chat has messages) -->
                 <div class="fixed-input-container">
+                    <!-- Fixed File Chips Container (outside input wrapper) -->
+                    <div id="fixedFileChipsContainer" class="file-chips-container"></div>
+                    
                     <div class="input-wrapper">
-                        <button class="attach-btn">
-                            <i class="fas fa-paperclip"></i>
-                        </button>
-                        <button class="voice-input-btn" id="fixedVoiceInputBtn" title="Voice Input">
+                        <a href="#" class="attach-btn" id="fixedAttachBtn" onclick="window.openFileInput(); return false;">
+                            <i class="fas fa-plus fa-2x"></i>
+                        </a>
+                        <button class="voice-input-btn" id="fixedVoiceInputBtn">
                             <i class="fas fa-microphone"></i>
                         </button>
                         <input type="text" id="fixedMessageInput" placeholder="Ask anything" class="message-input">
@@ -160,16 +183,21 @@
                 </div>
             </div>
             
-            <!-- Settings Panel -->
+            <!-- Right Side Panel for Settings (Fixed) -->
             <div class="config-panel" id="configPanel">
                 <div class="config-header">
-                    <h3>Settings</h3>
-                    <button class="close-config" id="closeConfig">
-                        <i class="fas fa-times"></i>
-                    </button>
+                    <h3>Model Parameters</h3>
                 </div>
                 
                 <div class="config-content">
+                    <div class="view-code-container">
+                        <button class="control-btn view-code-btn" id="viewCodeBtn" title="View Code">
+                            <span class="fa-stack">
+                                <i class="fas fa-circle fa-stack-2x"></i>
+                                <i class="fas fa-code fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </button>
+                    </div>
                     <div class="config-group">
                         <label for="providerSelect" class="selection-label">Model Provider</label>
                         <select id="providerSelect" class="provider-select">
@@ -228,20 +256,14 @@
                         <label for="systemPrompt">System Prompt:</label>
                         <textarea id="systemPrompt" placeholder="Enter system prompt..." class="system-prompt-textarea" rows="4"></textarea>
                     </div>
+                    
+                    <!-- View Code button moved to top of panel -->
                 </div>
-                </div>
+            </div>
             </div>
         </div>
         
-        <!-- Control Buttons -->
-        <div class="control-buttons">
-            <button class="control-btn view-code-btn" id="viewCodeBtn" title="View Code">
-                <i class="fas fa-code"></i>
-            </button>
-            <button class="control-btn settings-btn" id="settingsBtn" title="Settings">
-                <i class="fas fa-cog"></i>
-            </button>
-        </div>
+        <!-- No longer needed as settings is now a fixed pane and view code button moved to that pane -->
     </div>
     
     <!-- Code Modal -->
@@ -269,5 +291,6 @@
     
     <script src="backend-integration.js"></script>
     <script src="script.js"></script>
+    <script src="public/js/feedback.js"></script>
 </body>
 </html>

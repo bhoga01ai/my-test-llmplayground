@@ -7,6 +7,7 @@ const { validateRequest } = require('./middleware/validation');
 const modelRoutes = require('./routes/models');
 const chatHistoryRoutes = require('./routes/chatHistory');
 const speechRoutes = require('./routes/speech');
+const feedbackRoutes = require('./routes/feedback');
 const { errorHandler } = require('./middleware/errorHandler');
 const { logger } = require('./utils/logger');
 
@@ -53,6 +54,7 @@ app.get('/health', (req, res) => {
 app.use('/api/models', modelRoutes);
 app.use('/api', chatHistoryRoutes);
 app.use('/api/speech', speechRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Serve static files
 app.use(express.static(path.join(__dirname)));
